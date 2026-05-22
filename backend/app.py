@@ -1,9 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import shutil, os, uuid
+import shutil, os, uuid, datetime
 from groq import Groq
 from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
 
 load_dotenv()
 
@@ -20,44 +21,76 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-UPLOAD_DIR = "/tmp/resumes"
+# Use a local temp directory for Windows compatibility
+UPLOAD_DIR = os.path.join(os.getcwd(), "temp_resumes")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# MongoDB Setup
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+client_db = AsyncIOMotorClient(MONGO_URI)
+db = client_db.career_recommender
+resumes_collection = db.resumes
+
+client_groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 @app.post("/api/upload-resume")
 async def upload_resume(file: UploadFile = File(...)):
-    """Upload PDF resume and get career recommendations."""
+    """Upload PDF resume, parse with LLM, and save to MongoDB."""
     if not file.filename.endswith(".pdf"):
         raise HTTPException(400, "Only PDF files supported")
     
     file_id = str(uuid.uuid4())
-    path = f"{UPLOAD_DIR}/{file_id}.pdf"
+    path = os.path.join(UPLOAD_DIR, f"{file_id}.pdf")
     
-    with open(path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    
-    # Parse resume
-    raw_text = extract_text_from_pdf(path)
-    if not raw_text.strip():
-        raise HTTPException(400, "Could not extract text from PDF")
-    
-    parsed = parse_resume_with_llm(raw_text)
-    recommendations = recommend_careers(parsed, top_n=5)
-    
-    # Clean up
-    os.remove(path)
-    
-    return {
-        "parsed_profile": parsed,
-        "recommendations": recommendations
-    }
+    try:
+        with open(path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        
+        # Parse resume
+        raw_text = extract_text_from_pdf(path)
+        if not raw_text.strip():
+            raise HTTPException(400, "Could not extract text from PDF")
+        
+        parsed = parse_resume_with_llm(raw_text)
+        recommendations = recommend_careers(parsed, top_n=5)
+        
+        # Save to MongoDB
+        resume_doc = {
+            "file_id": file_id,
+            "filename": file.filename,
+            "parsed_profile": parsed,
+            "recommendations": recommendations,
+            "timestamp": datetime.datetime.utcnow()
+        }
+        await resumes_collection.insert_one(resume_doc)
+        
+        # Clean up local file
+        os.remove(path)
+        
+        return {
+            "id": file_id,
+            "parsed_profile": parsed,
+            "recommendations": recommendations
+        }
+    except Exception as e:
+        if os.path.exists(path):
+            os.remove(path)
+        raise HTTPException(500, f"Internal Server Error: {str(e)}")
 
 @app.post("/api/recommend-manual")
 async def recommend_manual(data: dict):
-    """Get recommendations from manually entered skills/interests."""
-    # data: { skills: [], interests: [], education: "", experience_years: 0 }
+    """Get recommendations from manually entered skills/interests and save to MongoDB."""
     recommendations = recommend_careers(data, top_n=5)
+    
+    # Save search to MongoDB
+    search_doc = {
+        "type": "manual_entry",
+        "profile": data,
+        "recommendations": recommendations,
+        "timestamp": datetime.datetime.utcnow()
+    }
+    await db.manual_searches.insert_one(search_doc)
+    
     return {"recommendations": recommendations}
 
 @app.get("/api/job-market/{role}")
@@ -85,7 +118,7 @@ async def career_advice(data: dict):
     Be specific and encouraging. Max 200 words.
     """
     
-    chat_completion = client.chat.completions.create(
+    chat_completion = client_groq.chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -96,8 +129,18 @@ async def career_advice(data: dict):
         max_tokens=400,
     )
     
-    return {"advice": chat_completion.choices[0].message.content}
+    advice = chat_completion.choices[0].message.content
+    
+    # Optional: Log advice request to MongoDB
+    await db.advice_logs.insert_one({
+        "role": role,
+        "gap": gap,
+        "advice": advice,
+        "timestamp": datetime.datetime.utcnow()
+    })
+    
+    return {"advice": advice}
 
 @app.get("/")
-def root():
-    return {"status": "Career Recommender API running"}
+async def root():
+    return {"status": "Career Recommender API running with MongoDB integration"}
