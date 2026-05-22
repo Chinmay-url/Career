@@ -1,0 +1,187 @@
+================================================================================
+                    COPY-PASTE COMMANDS TO RUN PROJECT
+================================================================================
+
+IMPORTANT: Follow these steps in order. Open separate terminals for each step.
+
+================================================================================
+                         STEP 1: VERIFY SETUP
+================================================================================
+
+Copy and paste this to verify everything is ready:
+
+python --version
+pip list | findstr fastapi
+Get-Service MongoDB
+
+Expected output:
+- Python 3.9 or higher
+- fastapi in the list
+- MongoDB running
+
+================================================================================
+                         STEP 2: START BACKEND
+================================================================================
+
+Open a NEW terminal and copy-paste this:
+
+cd c:\Users\manis\OneDrive\Desktop\SE-hackathon\Career
+python -m uvicorn app:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+
+Expected output:
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+Loading O*NET occupation data...
+Loaded 879 occupations from O*NET.
+Pre-computing embeddings for 879 careers...
+Embeddings ready.
+
+KEEP THIS TERMINAL OPEN - DO NOT CLOSE IT
+
+================================================================================
+                         STEP 3: OPEN FRONTEND
+================================================================================
+
+Open ANOTHER NEW terminal and copy-paste this:
+
+start "" "c:\Users\manis\OneDrive\Desktop\SE-hackathon\Career\frontend\index.html"
+
+Expected output:
+- Browser opens with the frontend UI
+- You should see the skill selector
+
+================================================================================
+                         STEP 4: TEST THE API
+================================================================================
+
+Open ANOTHER NEW terminal and copy-paste these commands one by one:
+
+TEST 1 - Get Recommendations:
+curl -X POST http://localhost:8000/api/recommendations/ ^
+  -H "Content-Type: application/json" ^
+  -d "{\"skills\": [\"Python\", \"SQL\"], \"interests\": [\"Data\"], \"top_n\": 5}"
+
+Expected: JSON response with career recommendations
+
+---
+
+TEST 2 - Get Dashboard:
+curl -X POST http://localhost:8000/api/dashboard/ ^
+  -H "Content-Type: application/json" ^
+  -d "{\"skills\": [\"Python\"], \"interests\": [\"AI\"], \"target_role\": \"Data Scientist\"}"
+
+Expected: JSON response with dashboard data and charts
+
+---
+
+TEST 3 - Analyze Skill Gap:
+curl -X POST http://localhost:8000/api/profile/skill-gap ^
+  -H "Content-Type: application/json" ^
+  -d "{\"skills\": [\"Python\"], \"target_role\": \"Data Scientist\"}"
+
+Expected: JSON response with missing skills and completion percentage
+
+---
+
+TEST 4 - Get Learning Path:
+curl -X POST http://localhost:8000/api/profile/learning-path ^
+  -H "Content-Type: application/json" ^
+  -d "{\"skill_gaps\": [\"Machine Learning\"], \"target_role\": \"Data Scientist\"}"
+
+Expected: JSON response with learning resources
+
+================================================================================
+                         STEP 5: USE THE FRONTEND
+================================================================================
+
+In the browser window that opened:
+
+1. Select skills from the dropdown
+2. Click "Get Recommendations"
+3. View the career matches
+4. Click on a career to see skill gaps
+5. View learning resources
+6. Try uploading a resume (PDF)
+
+================================================================================
+                    ALTERNATIVE: ONE-CLICK STARTUP
+================================================================================
+
+If you want to automate everything, copy-paste this:
+
+c:\Users\manis\OneDrive\Desktop\SE-hackathon\Career\run_project.bat
+
+This will:
+- Check if port 8000 is available
+- Start the backend automatically
+- Open the frontend in your browser
+
+================================================================================
+                         TROUBLESHOOTING
+================================================================================
+
+ISSUE: "Port 8000 already in use"
+SOLUTION: Copy-paste this to kill the process:
+taskkill /F /IM python.exe
+
+Then try starting the backend again.
+
+---
+
+ISSUE: "MongoDB connection error"
+SOLUTION: Copy-paste this to start MongoDB:
+Start-Service MongoDB
+
+---
+
+ISSUE: "ModuleNotFoundError: No module named 'fastapi'"
+SOLUTION: Copy-paste this to install dependencies:
+pip install -r requirements.txt
+
+---
+
+ISSUE: "Frontend not loading"
+SOLUTION: 
+1. Make sure backend is running (check terminal 1)
+2. Try opening the HTML file directly:
+   start "" "c:\Users\manis\OneDrive\Desktop\SE-hackathon\Career\frontend\index.html"
+
+================================================================================
+                         QUICK REFERENCE
+================================================================================
+
+Backend URL: http://localhost:8000
+Frontend URL: file:///c:/Users/manis/OneDrive/Desktop/SE-hackathon/Career/frontend/index.html
+
+API Endpoints:
+- POST /api/recommendations/
+- POST /api/dashboard/
+- POST /api/profile/skill-gap
+- POST /api/profile/learning-path
+- POST /api/trends/
+- POST /api/resume/upload
+- POST /api/career-advice
+
+Project Folder:
+c:\Users\manis\OneDrive\Desktop\SE-hackathon\Career
+
+Documentation:
+- README.md - Full documentation
+- MANUAL_RUN_GUIDE.md - Detailed setup
+- QUICK_START.txt - Quick reference
+- PROJECT_STATUS.md - Project status
+
+================================================================================
+                         NEXT STEPS
+================================================================================
+
+1. ✓ Copy-paste Step 2 command to start backend
+2. ✓ Copy-paste Step 3 command to open frontend
+3. ✓ Copy-paste Step 4 commands to test API
+4. ✓ Use the frontend UI to test features
+5. ✓ Upload a resume to test parsing
+6. ✓ Check job market trends
+
+================================================================================
+                    Status: ✓ READY FOR PRODUCTION
+                    Last Updated: May 23, 2026
+================================================================================

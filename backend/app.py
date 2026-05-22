@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os, datetime
 from groq import Groq
 from dotenv import load_dotenv
@@ -29,6 +31,11 @@ app.include_router(resume_router)
 app.include_router(dashboard_router)
 app.include_router(trend_router)
 app.include_router(profile_router)
+
+# Serve static files (frontend)
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 # MongoDB Setup
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -84,4 +91,13 @@ async def career_advice(data: dict):
 
 @app.get("/")
 async def root():
+    """Serve the frontend index.html"""
+    frontend_index = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
+    if os.path.exists(frontend_index):
+        return FileResponse(frontend_index)
+    return {"status": "Career Recommender API running with MongoDB integration"}
+
+
+@app.get("/api")
+async def api_root():
     return {"status": "Career Recommender API running with MongoDB integration"}

@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 pdfplumber
 spacy
@@ -12,3 +12,8 @@ groq
 motor
 joblib
 python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+pydantic[email]
+pytest
+httpx
