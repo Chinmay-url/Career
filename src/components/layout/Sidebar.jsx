@@ -7,7 +7,7 @@ import {
   Gauge,
   GitCompare,
   Sparkles,
-  UserRound,
+  Target,
 } from "lucide-react";
 
 const navItems = [
@@ -22,14 +22,14 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-line bg-surface/95 px-4 py-5 lg:block">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-white/10 bg-surface/95 px-4 py-5 backdrop-blur lg:block">
       <Link to="/dashboard" className="flex items-center gap-3 px-2">
-        <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent text-slate-950">
-          <UserRound size={20} />
+        <span className="grid h-11 w-11 place-items-center rounded-lg bg-gradient-to-br from-accent to-amber-300 text-slate-950 shadow-soft">
+          <Target size={21} />
         </span>
         <span>
-          <span className="block text-sm font-semibold text-white">CareerAI</span>
-          <span className="text-xs text-slate-400">Path Intelligence</span>
+          <span className="block text-base font-semibold text-white">CareerAI</span>
+          <span className="text-xs text-slate-400">Career path intelligence</span>
         </span>
       </Link>
 
@@ -41,8 +41,8 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 isActive
-                  ? "bg-accent text-slate-950"
-                  : "text-slate-300 hover:bg-panel hover:text-white"
+                  ? "bg-white text-slate-950 shadow-soft"
+                  : "text-slate-300 hover:bg-white/10 hover:text-white"
               }`
             }
           >
@@ -51,6 +51,11 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="absolute inset-x-4 bottom-5 rounded-lg border border-accent/30 bg-accent/10 p-4">
+        <p className="text-sm font-semibold text-white">Analysis Pipeline</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400">Upload resume, parse skills, compare career paths, and close gaps with roadmap actions.</p>
+      </div>
     </aside>
   );
 }

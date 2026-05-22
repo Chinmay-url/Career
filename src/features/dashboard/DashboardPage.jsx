@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ArrowRight, CheckCircle2, FileSearch, TrendingUp } from "lucide-react";
 import MetricCard from "../../components/ui/MetricCard";
 import Panel from "../../components/ui/Panel";
 import { marketTrendData, metrics, recommendations, skillRadar } from "../../lib/mockData";
@@ -20,22 +21,50 @@ import { marketTrendData, metrics, recommendations, skillRadar } from "../../lib
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
+      <section className="subtle-grid overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-white/10 via-panel to-surface p-6 shadow-soft">
+        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+              <TrendingUp size={14} />
+              Resume intelligence active
+            </div>
+            <h2 className="mt-5 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
+              Convert resume signals into career paths, skill gaps, and targeted learning plans.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+              This workspace connects parsed resume skills with market demand, role fit, peer patterns, and certification recommendations.
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            {["Resume parsed", "Skills mapped", "Career paths ranked", "Roadmap drafted"].map((step) => (
+              <div key={step} className="flex items-center gap-3 border-b border-white/10 py-3 last:border-0">
+                <CheckCircle2 className="text-accent" size={18} />
+                <span className="text-sm font-medium text-slate-200">{step}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Market Demand Signals">
+        <Panel
+          title="Market Demand Signals"
+          action={<span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">Live API ready</span>}
+        >
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={marketTrendData}>
-                <CartesianGrid stroke="#283245" strokeDasharray="3 3" />
+                <CartesianGrid stroke="#2b3548" strokeDasharray="3 3" />
                 <XAxis dataKey="month" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#111827", border: "1px solid #283245" }} />
-                <Line type="monotone" dataKey="ai" stroke="#2dd4bf" strokeWidth={3} />
-                <Line type="monotone" dataKey="data" stroke="#38bdf8" strokeWidth={3} />
-                <Line type="monotone" dataKey="frontend" stroke="#a78bfa" strokeWidth={3} />
+                <Tooltip contentStyle={{ background: "#101827", border: "1px solid #2b3548", borderRadius: 8 }} />
+                <Line type="monotone" dataKey="ai" stroke="#2dd4bf" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="data" stroke="#38bdf8" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="frontend" stroke="#f59e0b" strokeWidth={3} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -45,7 +74,7 @@ export default function DashboardPage() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={skillRadar}>
-                <PolarGrid stroke="#283245" />
+                <PolarGrid stroke="#2b3548" />
                 <PolarAngleAxis dataKey="skill" stroke="#cbd5e1" />
                 <Radar dataKey="target" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.12} />
                 <Radar dataKey="current" stroke="#2dd4bf" fill="#2dd4bf" fillOpacity={0.35} />
@@ -58,12 +87,15 @@ export default function DashboardPage() {
       <Panel title="Top Career Recommendations">
         <div className="grid gap-4 lg:grid-cols-3">
           {recommendations.map((role) => (
-            <article key={role.title} className="rounded-lg border border-line bg-panel p-4">
+            <article key={role.title} className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-0.5 hover:border-accent/50 hover:bg-white/[0.07]">
               <div className="flex items-start justify-between gap-3">
-                <h3 className="font-semibold text-white">{role.title}</h3>
-                <span className="text-sm font-bold text-accent">{role.match}%</span>
+                <div>
+                  <FileSearch className="mb-3 text-accent" size={20} />
+                  <h3 className="font-semibold text-white">{role.title}</h3>
+                </div>
+                <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-bold text-accent">{role.match}%</span>
               </div>
-              <p className="mt-2 text-sm text-slate-400">{role.salary} · {role.demand} demand</p>
+              <p className="mt-3 text-sm text-slate-400">{role.salary} | {role.demand} demand</p>
               <div className="mt-4">
                 <ResponsiveContainer width="100%" height={84}>
                   <BarChart data={role.skills.map((skill, index) => ({ skill, value: 88 - index * 8 }))}>
@@ -71,6 +103,9 @@ export default function DashboardPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              <button className="focus-ring mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent">
+                Inspect path <ArrowRight size={16} />
+              </button>
             </article>
           ))}
         </div>
