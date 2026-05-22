@@ -1,0 +1,19 @@
+import Badge from "../../components/ui/Badge";
+import Panel from "../../components/ui/Panel";
+import { roadmap } from "../../lib/mockData";
+
+export default function LearningRoadmapPage() {
+  return (
+    <Panel title="Learning Roadmap">
+      <div className="relative space-y-4">
+        {roadmap.map((item) => (
+          <article key={item.step} className="grid gap-4 rounded-lg border border-line bg-panel p-4 sm:grid-cols-[10rem_1fr_auto] sm:items-center">
+            <span className="text-sm font-semibold text-accent">{item.step}</span>
+            <h3 className="font-semibold text-white">{item.title}</h3>
+            <Badge>{item.status}</Badge>
+          </article>
+        ))}
+      </div>
+    </Panel>
+  );
+}
