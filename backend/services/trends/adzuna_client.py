@@ -1,6 +1,7 @@
 """Adzuna job market API client."""
 import os
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,3 +50,30 @@ def fetch_job_demand(job_title: str, country: str = "us") -> dict:
             "sample_jobs": [],
             "error": str(e),
         }
+
+
+def fetch_demand_map(job_titles: list[str], country: str = "us", max_workers: int = 5) -> dict[str, int]:
+    """
+    Fetch open-position counts for multiple roles in parallel.
+    Returns { title_lower: open_positions_int } — only includes roles
+    where a valid integer count was returned.
+
+    Used by the recommendation engine to boost high-demand careers (REQ-21).
+    """
+    demand: dict[str, int] = {}
+
+    def _fetch(title: str) -> tuple[str, int]:
+        result = fetch_job_demand(title, country)
+        count = result.get("open_positions", "N/A")
+        return title.lower(), count if isinstance(count, int) else 0
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_fetch, t): t for t in job_titles}
+        for future in as_completed(futures):
+            try:
+                key, count = future.result()
+                demand[key] = count
+            except Exception:
+                pass
+
+    return demand

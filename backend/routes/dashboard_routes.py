@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from services.recommendation.recommendation_engine import recommend_careers
+from services.recommendation.collaborative_api import get_collaborative_recommendations
 from services.skill_gap.gap_analysis import analyze_skill_gap
 from services.dashboard.chart_data import build_dashboard_summary, build_skills_radar
 
@@ -10,7 +10,8 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 async def get_dashboard(data: dict):
     """
     Full dashboard data: recommendations + skill gap + chart data.
-    Expects: { skills, interests, target_role (optional) }
+    Recommendations are ranked by semantic match + experience + live market demand (REQ-21).
+    Expects: { skills, interests, target_role (optional), experience_years (optional) }
     """
     skills = data.get("skills", [])
     interests = data.get("interests", [])
@@ -19,7 +20,11 @@ async def get_dashboard(data: dict):
     if not skills and not interests:
         raise HTTPException(400, "Provide skills or interests")
 
-    recommendations = recommend_careers(data, top_n=5)
+    recommendations = get_collaborative_recommendations(
+        user_profile=data,
+        top_n=5,
+        boost_market_demand=True,
+    )
 
     # Use top recommendation as target if not specified
     if not target_role and recommendations:
