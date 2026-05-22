@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pdfplumber
+spacy
+sentence-transformers
+scikit-learn
+numpy
+pandas
+requests
+groq
+lightfm
+joblib
+python-dotenv
