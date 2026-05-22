@@ -225,6 +225,9 @@ async function uploadResume(input) {
   }
 }
 
+// ── Card data store — avoids JSON in onclick attributes ───────────────────
+let _cardData = {};
+
 // ── Render career cards ────────────────────────────────────────────────────
 function renderResults(recs, userSkills) {
   const cont = document.getElementById('resultsContainer');
@@ -232,6 +235,16 @@ function renderResults(recs, userSkills) {
     cont.innerHTML = '<p style="color:#888">No recommendations found. Try adding more skills.</p>';
     return;
   }
+
+  // Store data by index so onclick just passes the index
+  _cardData = {};
+  recs.forEach((r, i) => {
+    _cardData[i] = {
+      title: r.title,
+      gaps: r.skill_gap || [],
+      userSkills: userSkills
+    };
+  });
 
   cont.innerHTML = `
     <p style="color:#666;font-size:13px;margin-bottom:1rem">
@@ -264,11 +277,11 @@ function renderResults(recs, userSkills) {
             ${gaps.slice(0,5).map(g => `<span class="gap-tag">+ ${g}</span>`).join('')}
           </div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <button onclick="getAdvice('${r.title.replace(/'/g,"\\'")}', ${JSON.stringify(userSkills)}, ${JSON.stringify(gaps)}, ${i})"
+            <button onclick="getAdvice(${i})"
               style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #534AB7;color:#534AB7;background:none;cursor:pointer">
               💡 Get AI advice
             </button>
-            <button onclick="getSkillGap('${r.title.replace(/'/g,"\\'")}', ${JSON.stringify(userSkills)}, ${i})"
+            <button onclick="getSkillGap(${i})"
               style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #1D9E75;color:#1D9E75;background:none;cursor:pointer">
               📊 Full skill gap
             </button>
@@ -280,14 +293,15 @@ function renderResults(recs, userSkills) {
 }
 
 // ── AI Career Advice ───────────────────────────────────────────────────────
-async function getAdvice(role, skills, gap, idx) {
+async function getAdvice(idx) {
+  const { title, gaps, userSkills } = _cardData[idx];
   const box = document.getElementById(`extra-${idx}`);
   box.innerHTML = '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div></div>';
   try {
     const res = await fetch(`${API_BASE}/api/career-advice`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ target_role: role, current_skills: skills, skill_gap: gap })
+      body: JSON.stringify({ target_role: title, current_skills: userSkills, skill_gap: gaps })
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
@@ -298,20 +312,24 @@ async function getAdvice(role, skills, gap, idx) {
 }
 
 // ── Full Skill Gap Analysis ────────────────────────────────────────────────
-async function getSkillGap(role, skills, idx) {
+async function getSkillGap(idx) {
+  const { title, userSkills } = _cardData[idx];
   const box = document.getElementById(`extra-${idx}`);
   box.innerHTML = '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div></div>';
   try {
     const res = await fetch(`${API_BASE}/api/profile/skill-gap`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ skills, target_role: role })
+      body: JSON.stringify({ skills: userSkills, target_role: title })
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
     const pct = data.completion_pct || 0;
     const missing = data.missing_skills || [];
     const matched = data.matched_skills || [];
+
+    // Store missing skills for the learning path button
+    _cardData[idx].missing = missing;
 
     box.innerHTML = `
       <div class="advice-block" style="background:#EEF2FF;border-color:#534AB7">
@@ -321,7 +339,7 @@ async function getSkillGap(role, skills, idx) {
         ${matched.length ? `<strong>You have:</strong> ${matched.slice(0,8).map(s=>`<span class="match-tag">✓ ${s}</span>`).join('')}<br>` : ''}
         ${missing.length ? `<strong>To learn:</strong> ${missing.slice(0,10).map(s=>`<span class="gap-tag">+ ${s}</span>`).join('')}` : ''}
         <br><br>
-        <button onclick="getLearningPath(${JSON.stringify(missing.slice(0,8))}, '${role.replace(/'/g,"\\'")}', ${idx})"
+        <button onclick="getLearningPath(${idx})"
           style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #534AB7;color:#534AB7;background:none;cursor:pointer">
           📚 Get learning resources
         </button>
@@ -332,7 +350,9 @@ async function getSkillGap(role, skills, idx) {
 }
 
 // ── Learning Resources ─────────────────────────────────────────────────────
-async function getLearningPath(gaps, role, idx) {
+async function getLearningPath(idx) {
+  const { title, missing } = _cardData[idx];
+  const gaps = (missing || []).slice(0, 8);
   const box = document.getElementById(`extra-${idx}`);
   const existing = box.innerHTML;
   box.innerHTML = existing + '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div><p>Generating learning path with Groq LLM...</p></div>';
@@ -340,7 +360,7 @@ async function getLearningPath(gaps, role, idx) {
     const res = await fetch(`${API_BASE}/api/profile/learning-path`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ skill_gaps: gaps, target_role: role })
+      body: JSON.stringify({ skill_gaps: gaps, target_role: title })
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
@@ -358,7 +378,7 @@ async function getLearningPath(gaps, role, idx) {
 
     box.innerHTML = `
       <div class="advice-block" style="background:#EEF2FF;border-color:#534AB7">
-        <strong>📚 Learning Path for ${role}</strong><br><br>
+        <strong>📚 Learning Path for ${title}</strong><br><br>
         ${resourceHtml}
       </div>`;
   } catch(e) {
