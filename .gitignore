@@ -1,11 +1,3 @@
+node_modules
+dist
 .env
-.env.local
-config/secrets.json
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.venv/
-.vscode/
-.idea/
-.DS_Store
