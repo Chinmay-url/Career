@@ -1,11 +1,15 @@
 import Panel from "../../components/ui/Panel";
+import { getParsedSkillsFromAnalysis } from "../../lib/analysisStorage";
 import { parsedSkills } from "../../lib/mockData";
 
 export default function ParsedSkillsPage() {
+  const backendSkills = getParsedSkillsFromAnalysis();
+  const skills = backendSkills.length ? backendSkills : parsedSkills;
+
   return (
     <Panel title="Parsed Skills View">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {parsedSkills.map((skill) => (
+        {skills.map((skill) => (
           <article key={skill.name} className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-semibold text-white">{skill.name}</h3>

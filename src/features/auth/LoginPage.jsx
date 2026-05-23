@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getAuthErrorMessage, loginWithCognito } from "./authService";
-import { saveAuthSession } from "./authStorage";
-import { isCognitoConfigured } from "./cognitoConfig";
+import { getAuthErrorMessage, loginWithBackend } from "./authService";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -20,14 +18,9 @@ export default function LoginPage() {
     const email = formData.get("email");
 
     try {
-      await loginWithCognito({
+      await loginWithBackend({
         email,
         password: formData.get("password"),
-      });
-
-      saveAuthSession({
-        name: email,
-        email,
       });
 
       navigate(redirectTo, { replace: true });
@@ -43,11 +36,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded-lg border border-line bg-surface p-8 shadow-soft">
         <p className="text-sm font-semibold text-accent">CareerAI</p>
         <h1 className="mt-2 text-2xl font-semibold text-white">Welcome back</h1>
-        {!isCognitoConfigured && (
-          <p className="mt-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-amber-100">
-            Local development auth is active. Configure Cognito env values before production deployment.
-          </p>
-        )}
+        <p className="mt-3 text-sm text-slate-400">Sign in with the FastAPI backend account you created.</p>
         {error && (
           <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-red-200">
             {error}

@@ -16,8 +16,8 @@ export default function ProtectedRoute() {
 
         if (isMounted) {
           saveAuthSession({
-            name: user.signInDetails?.loginId ?? user.username,
-            email: user.signInDetails?.loginId ?? user.username,
+            name: user.name ?? user.email ?? "CareerAI User",
+            email: user.email ?? user.username ?? "user@example.com",
           });
           setStatus("authenticated");
         }

@@ -1,12 +1,22 @@
 import Badge from "../../components/ui/Badge";
 import Panel from "../../components/ui/Panel";
+import { getPrimaryRecommendation } from "../../lib/analysisStorage";
 import { skillGaps } from "../../lib/mockData";
 
 export default function SkillGapPage() {
+  const primaryRole = getPrimaryRecommendation();
+  const backendGaps = primaryRole?.skillGap?.map((skill, index) => ({
+    skill,
+    current: Math.max(20, 50 - index * 4),
+    target: 80,
+    priority: index < 3 ? "High" : "Medium",
+  })) ?? [];
+  const gaps = backendGaps.length ? backendGaps : skillGaps;
+
   return (
     <Panel title="Skill Gap Analysis">
       <div className="space-y-4">
-        {skillGaps.map((gap) => (
+        {gaps.map((gap) => (
           <article key={gap.skill} className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

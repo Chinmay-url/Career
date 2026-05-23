@@ -16,9 +16,22 @@ import {
 import { ArrowRight, CheckCircle2, FileSearch, TrendingUp } from "lucide-react";
 import MetricCard from "../../components/ui/MetricCard";
 import Panel from "../../components/ui/Panel";
-import { marketTrendData, metrics, recommendations, skillRadar } from "../../lib/mockData";
+import { getParsedSkillsFromAnalysis, getRecommendationsFromAnalysis } from "../../lib/analysisStorage";
+import { marketTrendData, metrics, recommendations as mockRecommendations, skillRadar } from "../../lib/mockData";
 
 export default function DashboardPage() {
+  const backendRecommendations = getRecommendationsFromAnalysis();
+  const backendSkills = getParsedSkillsFromAnalysis();
+  const roles = backendRecommendations.length ? backendRecommendations : mockRecommendations;
+  const dashboardMetrics = backendRecommendations.length
+    ? [
+        { label: "Career Matches", value: String(backendRecommendations.length), change: "from resume", tone: "accent" },
+        { label: "Parsed Skills", value: String(backendSkills.length), change: "LLM extracted", tone: "sky" },
+        { label: "Skill Gaps", value: String(backendRecommendations[0]?.skillGap?.length ?? 0), change: "top role", tone: "warning" },
+        { label: "Best Match", value: `${Math.round(backendRecommendations[0]?.match ?? 0)}%`, change: "profile fit", tone: "violet" },
+      ]
+    : metrics;
+
   return (
     <div className="space-y-6">
       <section className="subtle-grid overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-white/10 via-panel to-surface p-6 shadow-soft">
@@ -47,7 +60,7 @@ export default function DashboardPage() {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+        {dashboardMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -86,7 +99,7 @@ export default function DashboardPage() {
 
       <Panel title="Top Career Recommendations">
         <div className="grid gap-4 lg:grid-cols-3">
-          {recommendations.map((role) => (
+          {roles.slice(0, 3).map((role) => (
             <article key={role.title} className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-0.5 hover:border-accent/50 hover:bg-white/[0.07]">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -98,7 +111,7 @@ export default function DashboardPage() {
               <p className="mt-3 text-sm text-slate-400">{role.salary} | {role.demand} demand</p>
               <div className="mt-4">
                 <ResponsiveContainer width="100%" height={84}>
-                  <BarChart data={role.skills.map((skill, index) => ({ skill, value: 88 - index * 8 }))}>
+                  <BarChart data={role.skills.slice(0, 5).map((skill, index) => ({ skill, value: 88 - index * 8 }))}>
                     <Bar dataKey="value" fill="#2dd4bf" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

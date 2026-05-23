@@ -15,6 +15,7 @@ from routes.resume_routes import router as resume_router
 from routes.dashboard_routes import router as dashboard_router
 from routes.trend_routes import router as trend_router
 from routes.profile_routes import router as profile_router
+from routes.auth_routes import router as auth_router
 
 app = FastAPI(title="AI Career Path Recommender")
 
@@ -31,6 +32,7 @@ app.include_router(resume_router)
 app.include_router(dashboard_router)
 app.include_router(trend_router)
 app.include_router(profile_router)
+app.include_router(auth_router)
 
 # Serve static files (frontend)
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")

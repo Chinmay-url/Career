@@ -1,6 +1,6 @@
 import { Bell, LogOut, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { logoutFromCognito } from "../../features/auth/authService";
+import { logoutFromBackend } from "../../features/auth/authService";
 import { clearAuthSession, getAuthUser } from "../../features/auth/authStorage";
 
 export default function Topbar() {
@@ -9,7 +9,7 @@ export default function Topbar() {
 
   async function handleLogout() {
     try {
-      await logoutFromCognito();
+      await logoutFromBackend();
     } finally {
       clearAuthSession();
       navigate("/login", { replace: true });
