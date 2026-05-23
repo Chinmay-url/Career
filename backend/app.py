@@ -34,10 +34,12 @@ app.include_router(trend_router)
 app.include_router(profile_router)
 app.include_router(auth_router)
 
-# Serve static files (frontend)
+# Serve built frontend assets when available.
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-if os.path.exists(frontend_path):
-    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+frontend_dist_path = os.path.join(frontend_path, "dist")
+frontend_assets_path = os.path.join(frontend_dist_path, "assets")
+if os.path.exists(frontend_assets_path):
+    app.mount("/assets", StaticFiles(directory=frontend_assets_path), name="assets")
 
 # MongoDB Setup
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -94,7 +96,11 @@ async def career_advice(data: dict):
 @app.get("/")
 async def root():
     """Serve the frontend index.html"""
-    frontend_index = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
+    frontend_index = os.path.join(frontend_dist_path, "index.html")
+    if os.path.exists(frontend_index):
+        return FileResponse(frontend_index)
+
+    frontend_index = os.path.join(frontend_path, "index.html")
     if os.path.exists(frontend_index):
         return FileResponse(frontend_index)
     return {"status": "Career Recommender API running with MongoDB integration"}
