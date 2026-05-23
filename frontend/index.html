@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Career Path Recommender</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8f9fa; color: #1a1a2e; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; color: #333; }
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; }
+    .tab-btn { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn.active { border-bottom-color: #534AB7; color: #534AB7; font-weight: 600; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .upload-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 3rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.2s; }
+    .upload-zone:hover { border-color: #534AB7; background: #EEEDFE; }
+    .upload-zone.dragover { border-color: #534AB7; background: #EEEDFE; }
+    .btn-primary { background: #534AB7; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; cursor: pointer; width: 100%; }
+    .btn-primary:hover { background: #3C3489; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .career-card { background: white; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; gap: 1rem; }
+    .score-ring { width: 64px; height: 64px; flex-shrink: 0; }
+    .loading { text-align: center; padding: 3rem; color: #888; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: #534AB7; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .gap-tag { font-size: 11px; background: #FAEEDA; color: #854F0B; padding: 3px 8px; border-radius: 99px; display: inline-block; margin: 2px; }
+    .match-tag { font-size: 11px; background: #E1F5EE; color: #0F6E56; padding: 3px 8px; border-radius: 99px; display: inline-block; margin: 2px; }
+    .chart-wrap { background: white; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; margin-bottom: 1rem; }
+    .skill-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+    .skill-chip { font-size: 12px; padding: 5px 12px; border-radius: 99px; border: 1px solid #ccc; cursor: pointer; transition: all 0.15s; }
+    .skill-chip.selected { background: #EEEDFE; color: #534AB7; border-color: #534AB7; }
+    .advice-block { background: #E1F5EE; border-left: 4px solid #1D9E75; padding: 1rem 1.25rem; border-radius: 8px; margin-top: 1rem; font-size: 14px; line-height: 1.7; }
+    .error-block { background: #FEE2E2; border-left: 4px solid #EF4444; padding: 1rem 1.25rem; border-radius: 8px; margin-top: 1rem; font-size: 14px; }
+    .parsed-block { background: #EEF2FF; border-left: 4px solid #534AB7; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1rem; font-size: 14px; line-height: 1.8; }
+    .onet-code { font-size: 11px; color: #999; margin-top: 2px; }
+    .progress-bar { height: 6px; background: #eee; border-radius: 3px; margin-top: 6px; }
+    .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #534AB7, #1D9E75); transition: width 0.5s; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎯 AI Career Path Recommender</h1>
+  <p style="color:#666;margin-bottom:1.5rem">Powered by O*NET database · Sentence-Transformers · Groq LLM</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('skills')">Skills</button>
+    <button class="tab-btn" onclick="showTab('upload')">Resume Upload</button>
+    <button class="tab-btn" onclick="showTab('results')">Results</button>
+    <button class="tab-btn" onclick="showTab('market')">Market Trends</button>
+  </div>
+
+  <!-- SKILLS PANEL -->
+  <div id="tab-skills" class="panel active">
+    <h2>Select your skills</h2>
+    <div class="skill-grid" id="skillGrid"></div>
+    <h2>Industry interest</h2>
+    <select id="industry">
+      <option value="">Select...</option>
+      <option value="Technology">Technology</option>
+      <option value="Finance">Finance</option>
+      <option value="Healthcare">Healthcare</option>
+      <option value="Consulting">Consulting</option>
+      <option value="Government">Government</option>
+      <option value="Education">Education</option>
+      <option value="Engineering">Engineering</option>
+    </select>
+    <button class="btn-primary" id="submitBtn" onclick="submitSkills()">Generate Recommendations →</button>
+  </div>
+
+  <!-- UPLOAD PANEL -->
+  <div id="tab-upload" class="panel">
+    <div class="upload-zone" id="dropZone">
+      <div style="font-size:3rem">📄</div>
+      <p style="font-size:16px;margin-top:8px">Drop your PDF resume here or click to upload</p>
+      <p style="font-size:12px;color:#888;margin-top:8px">Parsed by Groq LLM · Matched against 879 O*NET careers</p>
+      <input type="file" id="resumeFile" accept=".pdf" style="display:none" onchange="uploadResume(this)">
+    </div>
+    <div id="uploadStatus"></div>
+  </div>
+
+  <!-- RESULTS PANEL -->
+  <div id="tab-results" class="panel">
+    <div id="resultsContainer">
+      <p style="color:#888">Submit your skills or upload a resume to see recommendations.</p>
+    </div>
+  </div>
+
+  <!-- MARKET PANEL -->
+  <div id="tab-market" class="panel">
+    <div class="chart-wrap">
+      <h2 style="margin-top:0">Job demand by role</h2>
+      <canvas id="demandChart" height="200"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <h2 style="margin-top:0">Average salaries</h2>
+      <canvas id="salaryChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://localhost:8000";
+
+const SKILLS = [
+  "Python","JavaScript","SQL","Machine Learning","Data Analysis","React","AWS",
+  "Docker","Kubernetes","Excel","Statistics","Figma","Agile","Cybersecurity",
+  "Linux","Spark","Tableau","Git","Deep Learning","NLP","Java","C++","Node.js",
+  "TensorFlow","PyTorch","Networking","Project Management","Communication","Leadership"
+];
+
+let selected = new Set();
+
+// Drop zone click
+document.getElementById('dropZone').onclick = () => document.getElementById('resumeFile').click();
+
+// Drag and drop support
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.pdf')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('resumeFile').files = dt.files;
+    uploadResume(document.getElementById('resumeFile'));
+  } else {
+    alert('Please drop a PDF file.');
+  }
+});
+
+// Build skill chips
+const grid = document.getElementById('skillGrid');
+SKILLS.forEach(s => {
+  const chip = document.createElement('span');
+  chip.className = 'skill-chip';
+  chip.textContent = s;
+  chip.onclick = () => {
+    chip.classList.toggle('selected');
+    selected.has(s) ? selected.delete(s) : selected.add(s);
+  };
+  grid.appendChild(chip);
+});
+
+function showTab(id) {
+  const tabs = ['skills','upload','results','market'];
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', tabs[i] === id));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'market') renderMarketCharts();
+}
+
+// ── Submit skills ──────────────────────────────────────────────────────────
+async function submitSkills() {
+  if (!selected.size) return alert('Select at least one skill.');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  showTab('results');
+  const cont = document.getElementById('resultsContainer');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div><p>Matching against 879 O*NET careers...</p></div>';
+
+  const industry = document.getElementById('industry').value;
+  const interests = industry ? [industry] : [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/recommendations/`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ skills: [...selected], interests, top_n: 5 })
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    renderResults(data.recommendations, [...selected]);
+  } catch(e) {
+    cont.innerHTML = `<div class="error-block">Could not connect to backend.<br><small>${e.message}</small></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Recommendations →';
+  }
+}
+
+// ── Upload resume ──────────────────────────────────────────────────────────
+async function uploadResume(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('uploadStatus');
+  status.innerHTML = '<div class="loading"><div class="spinner"></div><p>Uploading and parsing resume with Groq LLM...</p></div>';
+
+  const form = new FormData();
+  form.append('file', file);
+
+  try {
+    // Correct endpoint: /api/resume/upload
+    const res = await fetch(`${API_BASE}/api/resume/upload`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error: ${res.status}`);
+    }
+    const data = await res.json();
+
+    const profile = data.parsed_profile || {};
+    const skills = profile.skills || [];
+    const exp = profile.experience_years ?? profile.experience ?? 'N/A';
+    const name = profile.name || file.name.replace('.pdf','');
+
+    status.innerHTML = `
+      <div class="parsed-block">
+        <strong>✅ Resume parsed successfully</strong><br>
+        <strong>Name:</strong> ${name}<br>
+        <strong>Skills found (${skills.length}):</strong> ${skills.slice(0,15).join(', ')}${skills.length > 15 ? '...' : ''}<br>
+        <strong>Experience:</strong> ${exp} years
+      </div>`;
+
+    renderResults(data.recommendations, skills);
+    showTab('results');
+  } catch(e) {
+    status.innerHTML = `<div class="error-block"><strong>Upload failed.</strong><br>${e.message}</div>`;
+  }
+}
+
+// ── Card data store — avoids JSON in onclick attributes ───────────────────
+let _cardData = {};
+
+// ── Render career cards ────────────────────────────────────────────────────
+function renderResults(recs, userSkills) {
+  const cont = document.getElementById('resultsContainer');
+  if (!recs || !recs.length) {
+    cont.innerHTML = '<p style="color:#888">No recommendations found. Try adding more skills.</p>';
+    return;
+  }
+
+  // Store data by index so onclick just passes the index
+  _cardData = {};
+  recs.forEach((r, i) => {
+    _cardData[i] = {
+      title: r.title,
+      gaps: r.skill_gap || [],
+      userSkills: userSkills
+    };
+  });
+
+  cont.innerHTML = `
+    <p style="color:#666;font-size:13px;margin-bottom:1rem">
+      Found <strong>${recs.length}</strong> career matches from O*NET database
+    </p>` +
+    recs.map((r, i) => {
+      const matchPct = Math.round(r.match_score || 0);
+      const gaps = r.skill_gap || [];
+      const matched = r.required_skills ? r.required_skills.filter(s =>
+        !gaps.map(g => g.toLowerCase()).includes(s.toLowerCase())
+      ) : [];
+      const color = i === 0 ? '#534AB7' : '#1D9E75';
+      const bgColor = i === 0 ? '#EEEDFE' : '#f5f5f5';
+
+      return `
+      <div class="career-card">
+        <svg class="score-ring" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="26" fill="${bgColor}" stroke="#eee" stroke-width="5"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="${color}" stroke-width="5"
+            stroke-dasharray="${matchPct / 100 * 163} 163" stroke-dashoffset="41" stroke-linecap="round"/>
+          <text x="32" y="36" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${matchPct}%</text>
+        </svg>
+        <div style="flex:1">
+          <strong style="font-size:16px">${r.title}</strong>
+          <div class="onet-code">O*NET: ${r.onet_code || 'N/A'}</div>
+          <p style="font-size:12px;color:#666;margin:6px 0">${(r.description || '').slice(0, 120)}${r.description && r.description.length > 120 ? '...' : ''}</p>
+          <div class="progress-bar"><div class="progress-fill" style="width:${matchPct}%"></div></div>
+          <div style="margin-top:8px">
+            ${matched.slice(0,4).map(s => `<span class="match-tag">✓ ${s}</span>`).join('')}
+            ${gaps.slice(0,5).map(g => `<span class="gap-tag">+ ${g}</span>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button onclick="getAdvice(${i})"
+              style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #534AB7;color:#534AB7;background:none;cursor:pointer">
+              💡 Get AI advice
+            </button>
+            <button onclick="getSkillGap(${i})"
+              style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #1D9E75;color:#1D9E75;background:none;cursor:pointer">
+              📊 Full skill gap
+            </button>
+          </div>
+          <div id="extra-${i}"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ── AI Career Advice ───────────────────────────────────────────────────────
+async function getAdvice(idx) {
+  const { title, gaps, userSkills } = _cardData[idx];
+  const box = document.getElementById(`extra-${idx}`);
+  box.innerHTML = '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div></div>';
+  try {
+    const res = await fetch(`${API_BASE}/api/career-advice`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ target_role: title, current_skills: userSkills, skill_gap: gaps })
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    box.innerHTML = `<div class="advice-block">${data.advice.replace(/\n/g,'<br>')}</div>`;
+  } catch(e) {
+    box.innerHTML = `<div class="error-block">Could not get advice: ${e.message}</div>`;
+  }
+}
+
+// ── Full Skill Gap Analysis ────────────────────────────────────────────────
+async function getSkillGap(idx) {
+  const { title, userSkills } = _cardData[idx];
+  const box = document.getElementById(`extra-${idx}`);
+  box.innerHTML = '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div></div>';
+  try {
+    const res = await fetch(`${API_BASE}/api/profile/skill-gap`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ skills: userSkills, target_role: title })
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    const pct = data.completion_pct || 0;
+    const missing = data.missing_skills || [];
+    const matched = data.matched_skills || [];
+
+    // Store missing skills for the learning path button
+    _cardData[idx].missing = missing;
+
+    box.innerHTML = `
+      <div class="advice-block" style="background:#EEF2FF;border-color:#534AB7">
+        <strong>Skill Gap Analysis for ${data.target_role}</strong><br><br>
+        <strong>Completion:</strong> ${pct}% (${matched.length} of ${data.total_required} skills)<br>
+        <div class="progress-bar" style="margin:6px 0"><div class="progress-fill" style="width:${pct}%"></div></div>
+        ${matched.length ? `<strong>You have:</strong> ${matched.slice(0,8).map(s=>`<span class="match-tag">✓ ${s}</span>`).join('')}<br>` : ''}
+        ${missing.length ? `<strong>To learn:</strong> ${missing.slice(0,10).map(s=>`<span class="gap-tag">+ ${s}</span>`).join('')}` : ''}
+        <br><br>
+        <button onclick="getLearningPath(${idx})"
+          style="font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #534AB7;color:#534AB7;background:none;cursor:pointer">
+          📚 Get learning resources
+        </button>
+      </div>`;
+  } catch(e) {
+    box.innerHTML = `<div class="error-block">Could not get skill gap: ${e.message}</div>`;
+  }
+}
+
+// ── Learning Resources ─────────────────────────────────────────────────────
+async function getLearningPath(idx) {
+  const { title, missing } = _cardData[idx];
+  const gaps = (missing || []).slice(0, 8);
+  const box = document.getElementById(`extra-${idx}`);
+  const existing = box.innerHTML;
+  box.innerHTML = existing + '<div class="loading" style="padding:1rem"><div class="spinner" style="width:24px;height:24px;border-width:3px"></div><p>Generating learning path with Groq LLM...</p></div>';
+  try {
+    const res = await fetch(`${API_BASE}/api/profile/learning-path`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ skill_gaps: gaps, target_role: title })
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    const resources = data.resources || [];
+
+    const resourceHtml = resources.length
+      ? resources.map(r => `
+          <div style="padding:8px 0;border-bottom:1px solid #ddd">
+            <strong>${r.skill}</strong><br>
+            <span style="color:#534AB7">📖 ${r.resource}</span> · 
+            <span style="color:#666">${r.url_hint || ''}</span> · 
+            <span style="color:#1D9E75">⏱ ${r.time_estimate || 'N/A'}</span>
+          </div>`).join('')
+      : '<p style="color:#888">No resources found. Try again.</p>';
+
+    box.innerHTML = `
+      <div class="advice-block" style="background:#EEF2FF;border-color:#534AB7">
+        <strong>📚 Learning Path for ${title}</strong><br><br>
+        ${resourceHtml}
+      </div>`;
+  } catch(e) {
+    box.innerHTML = `<div class="error-block">Could not get learning path: ${e.message}</div>`;
+  }
+}
+
+// ── Market Charts ──────────────────────────────────────────────────────────
+let chartsRendered = false;
+function renderMarketCharts() {
+  if (chartsRendered) return;
+  chartsRendered = true;
+  new Chart(document.getElementById('demandChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Data Scientist','AI/ML Engineer','DevOps Engineer','Cloud Architect','Cybersecurity Analyst'],
+      datasets: [{ label: 'Open Jobs', data: [52400,41200,38900,29700,35100], backgroundColor: '#534AB7', borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => (v/1000)+'k' } } } }
+  });
+  new Chart(document.getElementById('salaryChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Cloud Architect','AI/ML Engineer','Product Manager','DevOps Engineer','Data Scientist','Data Engineer'],
+      datasets: [{ label: 'Avg Salary ($k)', data: [145,130,120,118,115,112], backgroundColor: '#1D9E75', borderRadius: 6 }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => '$'+v+'k' } } } }
+  });
+}
+</script>
+</body>
+</html>
